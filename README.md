@@ -15,11 +15,12 @@ composer require savannabits/dockavel
 ```
 
 ## Usage
-
-```php
-// Usage description here
+Simply Run the `docker:install` command with your `image` name and optionally your bridge `network` name
+```shell
+# You can run php artisan docker:install --help to see all the options available
+php artisan docker:install yourimagename
 ```
-
+After successfully publishing all the docker config, the command will ask you whether to install itself. If you have no further use of it, you can proceed to uninstall it.
 ### Testing
 
 ```bash
