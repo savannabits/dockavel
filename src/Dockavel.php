@@ -73,7 +73,7 @@ class Dockavel extends Command
 
     private function cleanUp(): void
     {
-        $this->info('Cleaning up and removing Arc...');
+        $this->info('Cleaning up and removing Dockavel...');
         $this->cmd('composer remove savannabits/dockavel --ignore-platform-reqs');
     }
 }
