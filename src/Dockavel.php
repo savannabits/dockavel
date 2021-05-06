@@ -9,31 +9,36 @@ use Symfony\Component\Process\Process;
 
 class Dockavel extends Command
 {
-    protected $name='docker:install';
+    protected $signature='docker:install 
+                         {image : The image name}
+                         {network? : The bridge network to use}
+                         {--f|force : Whether to overwrite published files}
+                        ';
     protected $description="Run an install to publish all the resources needed to run docker";
 
     public function handle() {
+        $this->info("We are here");
         $force = $this->hasOption('force');
-        $php = $this->choice("Choose your version of PHP",["php8.x","php7.4"], ["php7.4"]);
+        $php = $this->choice("Choose your version of PHP",["php8.x","php7.4"], "php8.x");
         if (!$php) {
             $this->error("You must specify a php version");
             die();
         }
         $image = $this->argument('image');
-        $network = $this->argument('network') ?? "bridge";
+        $network = $this->argument('network') ?? $image."net";
         $this->prepareEnv();
         $this->publishConfig($php,$force);
         if ($network!=='bridge' && $network !=='docker' && $this->confirm("would you like to create the $network bridge network?")) {
             $this->cmd("docker network create $network");
         }
-        if ($this->confirm("would you like to create the ${$image}db docker volume for the database?")) {
-            $this->cmd("docker volume create ${image}db");
+        if ($this->confirm("would you like to create the {$image}db docker volume for the database?")) {
+            $this->cmd("docker volume create {$image}db");
         }
         if ($this->confirm("My Work here is done. Do you want to uninstall me now?")) {
             $this->cleanUp();
         }
     }
-    public function cmd($cmd) {
+    private function cmd($cmd) {
         $process = Process::fromShellCommandline($cmd,null,array_merge($_SERVER, $_ENV),null,null);
         $process->run(function ($type,$line){
             $this->line($line);
@@ -41,17 +46,17 @@ class Dockavel extends Command
     }
     protected function replaceInFile($filename, $search, $replace) {
         $content=file_get_contents($filename);
-        str_replace($search,$replace,$content);
-        file_put_contents($filename, $content);
+        $newContent = str_replace($search,$replace,$content);
+        file_put_contents($filename, $newContent);
     }
     protected function prepareEnv() {
         $image = $this->argument('image');
         $network = $this->argument('network');
         $env = __DIR__."/../env/.env.docker";
-        $this->replaceInFile($env,":image:",$image);
-        $this->replaceInFile($env,":network:",$network);
-        //Then publish it
-        $this->cmd("cp ".$env." ".base_path(".env.docker"));
+        $dest = base_path(".env.docker");
+        $this->cmd("cp -rf $env $dest");
+        $this->replaceInFile($dest,":image:",$image);
+        $this->replaceInFile($dest,":network:",$network);
     }
     protected function publishConfig(string $phpVersion, bool $force=false) {
         $this->info('Publishing docker Config...');
@@ -61,7 +66,8 @@ class Dockavel extends Command
         ]);
 
         //Configure the right version
-        $this->cmd("mv ".base_path("docker/$phpVersion")." ".base_path(".")." -R");
+        $this->cmd("cp -rf ".base_path("docker/$phpVersion/docker-compose.yml")." ".base_path("."));
+        $this->cmd("cp -rf ".base_path("docker/$phpVersion/.docker")." ".base_path("."));
         $this->cmd("rm -rf docker");
     }
 
@@ -70,19 +76,4 @@ class Dockavel extends Command
         $this->info('Cleaning up and removing Arc...');
         $this->cmd('composer remove savannabits/dockavel --ignore-platform-reqs');
     }
-
-    protected function getOptions(): array
-    {
-        return [
-            ["force","f",InputOption::VALUE_NONE, "If the docker config already exists, force overwrites the existing files when publishing."]
-        ];
-    }
-    protected function getArguments(): array
-    {
-        return [
-            ['image', InputArgument::REQUIRED, "The name of the image with which the docker containers will be prefixed."],
-            ['network', InputArgument::OPTIONAL, "The name of the docker bridge network to use (will be created if it doesn't exist)",'bridge']
-        ];
-    }
-
 }

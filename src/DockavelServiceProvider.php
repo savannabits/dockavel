@@ -52,11 +52,11 @@ class DockavelServiceProvider extends ServiceProvider
     public function register()
     {
         // Automatically apply the package configuration
-        $this->mergeConfigFrom(__DIR__.'/../config/config.php', 'dockavel');
+//        $this->mergeConfigFrom(__DIR__.'/../config/config.php', 'dockavel');
 
-        // Register the main class to use with the facade
+        /*// Register the main class to use with the facade
         $this->app->singleton('dockavel', function () {
             return new Dockavel;
-        });
+        });*/
     }
 }
