@@ -4,14 +4,15 @@ services:
     build:
       context: ./
       dockerfile: ./.docker/Dockerfile
+      args:
+        UID: ${DOCKER_UID}
+        USER: ${DOCKER_HOST_USER}
     image: ${DOCKER_IMAGE_NAME}
     environment:
       ENABLE_CRON_JOB: ${DOCKER_ENABLE_CRON_JOB}
       ENABLE_LARAVEL_WORKER: ${DOCKER_ENABLE_LARAVEL_WORKER}
       ENABLE_LARAVEL_HORIZON: ${DOCKER_ENABLE_LARAVEL_HORIZON}
       ENABLE_LARAVEL_WEBSOCKETS: ${DOCKER_ENABLE_LARAVEL_WEBSOCKETS}
-      UID: ${DOCKER_UID}
-      HOST_USER: ${DOCKER_HOST_USER}
     container_name: ${DOCKER_IMAGE_NAME}-app
     restart: unless-stopped
     working_dir: /app
@@ -44,7 +45,7 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${DB_DATABASE}
-      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
       MYSQL_USER: ${DB_USERNAME}
       MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:

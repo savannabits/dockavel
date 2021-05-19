@@ -16,6 +16,8 @@ services:
     container_name: ${DOCKER_IMAGE_NAME}-app
     restart: unless-stopped
     working_dir: /app
+    ports:
+      - ${DOCKER_SERVER_EXPOSED_PORT}:8000
     depends_on:
       - db
       - redis
@@ -24,28 +26,15 @@ services:
       - ./:/app:delegated
     networks:
       - default
-  server:
-    image: nginx:alpine
-    container_name: ${DOCKER_IMAGE_NAME}-server
-    depends_on:
-      - app
-    restart: unless-stopped
-    ports:
-      - ${DOCKER_SERVER_EXPOSED_PORT}:80
-    environment:
-      APP_HOST: ${DOCKER_IMAGE_NAME}-app
-    volumes:
-      - ./:/app:delegated
-      - ./.docker/config/appserver.conf.template:/etc/nginx/templates/default.conf.template
-    networks:
-      - default
+    extra_hosts:
+      - "csm.strathmore.edu:172.17.0.1"
   db:
     image: mariadb:latest
     container_name: ${DOCKER_IMAGE_NAME}-db
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${DB_DATABASE}
-      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
       MYSQL_USER: ${DB_USERNAME}
       MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
@@ -74,6 +63,18 @@ services:
       - ${DOCKER_MAILHOG_WEB_PORT}:8025
     networks:
       - default
+  websockets:
+    image: ${DOCKER_IMAGE_NAME}
+    container_name: ${DOCKER_IMAGE_NAME}-websockets
+    restart: unless-stopped
+    command: ["php","artisan","websockets:serve"]
+    ports:
+      - ${DOCKER_WEBSOCKETS_EXPOSED_PORT}:6001
+    volumes:
+      - ./:/app:delegated
+    networks:
+      - default
+
 volumes:
   db-data:
     external:

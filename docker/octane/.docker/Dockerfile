@@ -1,8 +1,8 @@
-FROM php:7.4-fpm-alpine
+FROM spiralscout/roadrunner:2.1.1 as rr
+FROM php:8-fpm-alpine
 
 LABEL maintainer="Sam Maosa <maosa.sam@gmail.com>"
 
-WORKDIR /app
 # Install system packages
 RUN apk update && \
     apk add --no-cache \
@@ -53,7 +53,6 @@ RUN docker-php-ext-configure gd \
         curl \
         ctype \
         fileinfo \
-        json \
         gettext \
         gd \
         exif \
@@ -65,25 +64,31 @@ RUN docker-php-ext-configure gd \
         pdo_mysql \
         pdo_pgsql \
         pdo_dblib \
-        soap \
         sockets \
         zip \
         xml \
         pcntl
+# Enable opcache
+RUN docker-php-ext-enable opcache
 # Install PECL extensions
-RUN pecl install memcached && \
-    docker-php-ext-enable memcached
+#RUN pecl install memcached && \
+#    docker-php-ext-enable memcached
 
 RUN pecl install redis
 RUN docker-php-ext-enable redis
 
+# Install Extensions (Swoole)
+ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
+RUN chmod +x /usr/local/bin/install-php-extensions && sync
+RUN install-php-extensions swoole
+
 RUN apk del build-dependencies
+
+WORKDIR /app
 
 COPY .docker/config /tmp/config
 # Download trusted certs
 RUN mkdir -p /etc/ssl/certs && update-ca-certificates && \
-# Copy php configuration
-    cp /tmp/config/php.ini /usr/local/etc/php/php.ini && \
 # Copy supervisor config
     mkdir /etc/supervisor.d && \
     cp /tmp/config/supervisord.conf /etc/supervisord.conf && \
@@ -93,6 +98,14 @@ RUN mkdir -p /etc/ssl/certs && update-ca-certificates && \
     cp /tmp/config/entrypoint.sh /entrypoint.sh && \
     rm -rf /tmp/config && \
     chmod a+x /entrypoint.sh
+
+# Copy RoadRunner
+COPY --from=rr /usr/bin/rr /usr/bin/rr
+COPY --from=rr /usr/bin/rr ./rr
+
+# Copy RoadRunner config
+COPY --from=rr /etc/rr.yaml /etc/rr.yaml
+COPY --from=rr /etc/rr.yaml ./.rr.yaml
 
 ENV ENABLE_CRON_JOB=${ENABLE_CRON_JOB:-false}
 ENV ENABLE_LARAVEL_WORKER=${ENABLE_LARAVEL_WORKER:-false}
@@ -105,7 +118,11 @@ RUN adduser -S -D -G www-data -u $UID -h /home/$USER $USER
 RUN mkdir -p /home/$USER/.composer && \
     chown -R $USER:www-data /home/$USER
 RUN chown -R $USER:www-data /app
+#Add octane state log
 
+#Make rr executable
+RUN chmod 774 ./rr
 ENTRYPOINT ["/entrypoint.sh"]
 
+EXPOSE 8000
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]

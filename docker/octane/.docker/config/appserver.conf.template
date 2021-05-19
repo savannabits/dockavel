@@ -1,0 +1,28 @@
+server {
+    listen 80;
+    listen [::]:80;
+    error_log  /var/log/nginx/error.log;
+    access_log /var/log/nginx/access.log;
+
+    location / {
+        root /app/public;
+        index index.php;
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        root /app/public;
+        fastcgi_pass ${APP_HOST}:8000;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+    }
+
+    # Deny .ht* access
+    location ~ /\.ht {
+            deny all;
+    }
+
+    location = /favicon.ico { log_not_found off; access_log off; }
+    location = /robots.txt { log_not_found off; access_log off; allow all; }
+}
