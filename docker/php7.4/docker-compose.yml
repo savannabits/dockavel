@@ -3,24 +3,51 @@ services:
   app:
     build:
       context: ./
+      network: host
       dockerfile: ./.docker/Dockerfile
       args:
         UID: ${DOCKER_UID}
         USER: ${DOCKER_HOST_USER}
     image: ${DOCKER_IMAGE_NAME}
-    environment:
-      ENABLE_CRON_JOB: ${DOCKER_ENABLE_CRON_JOB}
-      ENABLE_LARAVEL_WORKER: ${DOCKER_ENABLE_LARAVEL_WORKER}
-      ENABLE_LARAVEL_HORIZON: ${DOCKER_ENABLE_LARAVEL_HORIZON}
-      ENABLE_LARAVEL_WEBSOCKETS: ${DOCKER_ENABLE_LARAVEL_WEBSOCKETS}
     container_name: ${DOCKER_IMAGE_NAME}-app
     restart: unless-stopped
+    command: php-fpm -F
     working_dir: /app
+    extra_hosts:
+      - "thishost:172.17.0.1"
     depends_on:
       - db
       - redis
     volumes:
       - ~/.composer-docker/cache:/root/.composer/cache:delegated
+      - ./:/app:delegated
+    networks:
+      - default
+  queue:
+    image: ${DOCKER_IMAGE_NAME}
+    container_name: ${DOCKER_IMAGE_NAME}-queue
+    depends_on:
+      - app
+    restart: unless-stopped
+    working_dir: /app
+    command: php artisan queue:work
+    extra_hosts:
+      - "thishost:172.17.0.1"
+    volumes:
+      - ./:/app:delegated
+    networks:
+      - default
+  cron:
+    image: ${DOCKER_IMAGE_NAME}
+    container_name: ${DOCKER_IMAGE_NAME}-cron
+    depends_on:
+      - app
+    restart: unless-stopped
+    extra_hosts:
+      - "thishost:172.17.0.1"
+    working_dir: /app
+    command: crond -f
+    volumes:
       - ./:/app:delegated
     networks:
       - default
@@ -66,14 +93,21 @@ services:
       - redis-data:/var/lib/redis
     networks:
       - default
-  mailhog:
-    image: "mailhog/mailhog"
-    container_name: ${DOCKER_IMAGE_NAME}-mailhog
-    restart: unless-stopped
-    ports:
-      - ${DOCKER_MAILHOG_WEB_PORT}:8025
-    networks:
-      - default
+  # websockets:
+  #   image: ${DOCKER_IMAGE_NAME}
+  #   container_name: ${DOCKER_IMAGE_NAME}-websockets
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - app
+  #   volumes:
+  #     - ./:/app:delegated
+  #   command: php artisan websockets:serve
+  #   expose:
+  #     - "6001"
+  #   ports:
+  #     - "${DOCKER_WEBSOCKETS_EXPOSED_PORT}:6001"
+  #   networks:
+  #     - default
 volumes:
   db-data:
     external:

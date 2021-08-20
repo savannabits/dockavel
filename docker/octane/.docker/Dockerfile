@@ -1,5 +1,5 @@
 FROM spiralscout/roadrunner:2.1.1 as rr
-FROM php:8-fpm-alpine
+FROM php:8-fpm-alpine:3.13
 
 LABEL maintainer="Sam Maosa <maosa.sam@gmail.com>"
 

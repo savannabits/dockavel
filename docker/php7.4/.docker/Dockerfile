@@ -1,4 +1,4 @@
-FROM php:7.4-fpm-alpine
+FROM php:7.4-fpm-alpine3.13
 
 LABEL maintainer="Sam Maosa <maosa.sam@gmail.com>"
 
@@ -105,7 +105,7 @@ RUN adduser -S -D -G www-data -u $UID -h /home/$USER $USER
 RUN mkdir -p /home/$USER/.composer && \
     chown -R $USER:www-data /home/$USER
 RUN chown -R $USER:www-data /app
-
+EXPOSE 6001
 ENTRYPOINT ["/entrypoint.sh"]
 
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
+CMD ["php-fpm", "-F"]
