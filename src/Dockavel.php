@@ -20,7 +20,7 @@ class Dockavel extends Command
     {
         $this->info("We are here");
         $force = $this->hasOption('force');
-        $php = $this->choice("Choose your version of PHP", ["php8.x", "php7.4", "octane"], "php8.x");
+        $php = $this->choice("Choose your version of PHP", ["php8.1", "php8.x", "php7.4", "octane"], "php8.1");
         if (!$php) {
             $this->error("You must specify a php version");
             die();
