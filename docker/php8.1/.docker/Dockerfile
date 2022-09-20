@@ -1,4 +1,4 @@
-FROM php:fpm-alpine
+FROM php:8.1-fpm-alpine3.15
 
 LABEL maintainer="Sam Maosa <maosa.sam@gmail.com>"
 
@@ -55,14 +55,12 @@ RUN docker-php-ext-configure gd \
         fileinfo \
         gettext \
         gd \
-        exif \
-        iconv \
+        exif
+RUN docker-php-ext-install \
         intl \
-        tokenizer \
         ldap \
         opcache \
         pdo_mysql \
-        pdo_sqlite \
         pdo_pgsql \
         pdo_dblib \
         soap \
