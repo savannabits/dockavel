@@ -3,6 +3,14 @@ server {
     listen [::]:80;
     error_log  /var/log/nginx/error.log;
     access_log /var/log/nginx/access.log;
+    proxy_read_timeout      600;
+    proxy_connect_timeout   600;
+    proxy_send_timeout      600;
+    send_timeout            600;
+    fastcgi_connect_timeout 600;
+    fastcgi_send_timeout    600;
+    fastcgi_read_timeout    600;
+    client_max_body_size    3M;
 
     location / {
         root /app/public;
