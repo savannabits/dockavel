@@ -46,7 +46,7 @@ services:
     extra_hosts:
       - "thishost:172.17.0.1"
     working_dir: /app
-    command: crond -f
+    command: cron -f
     volumes:
       - ./:/app:delegated
     networks:
