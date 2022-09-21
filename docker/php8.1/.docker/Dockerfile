@@ -1,73 +1,48 @@
-FROM php:8.1-fpm-alpine3.15
+FROM php:8.1-fpm
 
 LABEL maintainer="Sam Maosa <maosa.sam@gmail.com>"
 
 WORKDIR /app
 # Install system packages
-RUN apk update && \
-    apk add --no-cache \
-        bash \
+RUN apt-get update && \
+    apt-get install -y \
+        build-essential \
+        locales \
         git \
         curl \
         nano \
         g++ \
-        sudo \
-        freetds \
-        freetype \
-        icu \
-        libintl \
-        libldap \
-        libjpeg \
-        libpng \
-        libpq \
-        libwebp \
-        libmemcached \
         supervisor \
-        libzip \
-        composer && \
-    apk add --no-cache --virtual build-dependencies \
-        curl-dev \
-        freetds-dev \
-        freetype-dev \
-        gettext-dev \
-        icu-dev \
-        jpeg-dev \
-        libpng-dev \
-        libwebp-dev \
-        libxml2-dev \
-        libzip-dev \
-        libmemcached-dev \
-        openldap-dev \
-        postgresql-dev \
-        zlib-dev \
-        autoconf \
-        build-base
-# Install PHP extensions
-RUN docker-php-ext-configure gd \
-        --with-freetype=/usr/include/ \
-        --with-jpeg=/usr/include/ && \
-    docker-php-ext-configure ldap --with-libdir=lib/ && \
-    docker-php-ext-configure pdo_dblib --with-libdir=lib/ && \
-    docker-php-ext-install \
-        bcmath \
+        libfreetype6-dev \
+    	libjpeg62-turbo-dev \
+    	libpng-dev \
+        zip \
+        jpegoptim \
+        optipng \
+        pngquant \
+        gifsicle \
+        unzip \
+        git \
         curl \
-        ctype \
-        fileinfo \
-        gettext \
-        gd \
-        exif
-RUN docker-php-ext-install \
-        intl \
+        lua-zlib-dev \
+        libmemcached-dev \
+        ldap-utils \
+        postgresql \
+        libldb-dev libldap2-dev
+
+RUN apt-get install -y \
+        libzip-dev libxml2-dev
+# Install PHP extensions \
+RUN docker-php-ext-configure ldap \
+      && docker-php-ext-configure gd --with-freetype --with-jpeg \
+      && docker-php-ext-install -j$(nproc) gd \
+      && docker-php-ext-install \
         ldap \
         opcache \
         pdo_mysql \
-        pdo_pgsql \
-        pdo_dblib \
-        soap \
         sockets \
         zip \
-        xml \
-        pcntl
+        xml
 # Install PECL extensions
 RUN pecl install memcached && \
     docker-php-ext-enable memcached
@@ -75,7 +50,10 @@ RUN pecl install memcached && \
 RUN pecl install redis
 RUN docker-php-ext-enable redis
 
-RUN apk del build-dependencies
+RUN docker-php-ext-configure tokenizer --with-libdir=lib/
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN apt-get update && apt-get install -y sudo
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY .docker/config /tmp/config
 # Download trusted certs
@@ -86,8 +64,8 @@ RUN mkdir -p /etc/ssl/certs && update-ca-certificates && \
     mkdir /etc/supervisor.d && \
     cp /tmp/config/supervisord.conf /etc/supervisord.conf && \
     cp -r /tmp/config/supervisor.d /etc && \
-# Copy cron job
-    cp /tmp/config/crontab /etc/crontabs/www-data && \
+# Copy cron job \
+    cp /tmp/config/crontab /etc/cron.d/www-data && \
     cp /tmp/config/entrypoint.sh /entrypoint.sh && \
     rm -rf /tmp/config && \
     chmod a+x /entrypoint.sh
@@ -98,12 +76,17 @@ ENV ENABLE_LARAVEL_HORIZON=${ENABLE_LARAVEL_HORIZON:-false}
 ENV ENABLE_LARAVEL_WEBSOCKETS=${ENABLE_LARAVEL_WEBSOCKETS:-false}
 ARG UID=1000
 ARG USER='developer'
+
 #Create non-root sudoer
-RUN adduser -S -D -G www-data -u $UID -h /home/$USER $USER
+RUN groupadd  $USER && \
+    useradd --create-home --no-log-init --uid $UID --gid $USER $USER && \
+    echo "$USER ALL=(ALL:ALL) NOPASSWD:ALL" | tee -a /etc/sudoers && \
+    usermod -aG www-data $USER
+
 RUN mkdir -p /home/$USER/.composer && \
     chown -R $USER:www-data /home/$USER
 RUN chown -R $USER:www-data /app
-EXPOSE 6001
+
 ENTRYPOINT ["/entrypoint.sh"]
 
 CMD ["php-fpm", "-F"]
