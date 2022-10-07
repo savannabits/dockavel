@@ -53,6 +53,7 @@ RUN docker-php-ext-enable redis
 RUN docker-php-ext-configure tokenizer --with-libdir=lib/
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 RUN apt-get update && apt-get install -y sudo
+RUN docker-php-ext-install bcmath exif gd
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY .docker/config /tmp/config
